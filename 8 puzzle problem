@@ -1,0 +1,83 @@
+from collections import deque
+
+
+class PuzzleState:
+    def __init__(self, puzzle, parent=None, move="Initial"):
+        self.puzzle = puzzle
+        self.parent = parent
+        self.move = move
+        if self.parent is None:
+            self.depth = 0
+        else:
+            self.depth = parent.depth + 1
+
+    def __eq__(self, other):
+        return self.puzzle == other.puzzle
+
+    def __hash__(self):
+        return hash(str(self.puzzle))
+
+    def __str__(self):
+        return "\n".join([ " ".join(map(str, row)) for row in self.puzzle ])
+
+    def find_blank(self):
+      
+        for i in range(3):
+            for j in range(3):
+                if self.puzzle[i][j] == 0:
+                    return (i, j)
+
+    def generate_children(self):
+        children = []
+        blank = self.find_blank()
+        possible_moves = [ (0, -1, "left"), (0, 1, "right"), (-1, 0, "up"), (1, 0, "down") ]
+
+        for move in possible_moves:
+            new_pos = (blank[0] + move[0], blank[1] + move[1])
+            if 0 <= new_pos[0] < 3 and 0 <= new_pos[1] < 3:
+                new_puzzle = [ [ tile for tile in row ] for row in self.puzzle ]
+                new_puzzle[blank[0]][blank[1]] = new_puzzle[new_pos[0]][new_pos[1]]
+                new_puzzle[new_pos[0]][new_pos[1]] = 0
+                children.append(PuzzleState(new_puzzle, parent=self, move=move[2]))
+
+        return children
+
+def bfs(initial_state, goal_state):
+    queue = deque([initial_state])
+    visited = set()
+    visited.add(initial_state)
+
+    while queue:
+        current_state = queue.popleft()
+
+        if current_state == goal_state:
+            return current_state
+
+        for child in current_state.generate_children():
+            if child not in visited:
+                visited.add(child)
+                queue.append(child)
+
+    return None
+
+if __name__ == "__main__":
+    initial_state = PuzzleState([[1, 2, 3], [4, 0, 5], [6, 7, 8]])
+    goal_state = PuzzleState([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+
+    solution = bfs(initial_state, goal_state)
+
+    if solution is None:
+        print("No solution found")
+    else:
+        path = []
+        current = solution
+        while current.parent is not None:
+            path.append((current.move, current.depth, "\n".join(map(str, current.puzzle))))
+            current = current.parent
+        path.reverse()
+
+        print("Solution found in", len(path), "moves:")
+        for move, depth, state in path:
+            print(f"Move: {move}, Depth: {depth}")
+            print(state)
+            print()
